@@ -1,1 +1,792 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>BDW Coils | Portable Antenna Coils</title>
+
+<meta name="description" content="BDW Coils — hand-built portable antenna coils by N4BDW for SSB field operation.">
+
+<style>
+:root {
+    --blue: #19aaf5;
+    --dark: #061018;
+    --dark2: #0d1a23;
+    --line: #263d4d;
+    --text: #edf4f8;
+    --muted: #aab9c5;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    background: var(--dark);
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.6;
+}
+
+.container {
+    width: min(1120px, 92%);
+    margin: auto;
+}
+
+/* NAVIGATION */
+
+header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(6,16,24,.94);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+}
+
+.nav {
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    font-size: 25px;
+    font-weight: 900;
+    letter-spacing: 4px;
+}
+
+.logo span {
+    color: var(--blue);
+}
+
+nav a {
+    margin-left: 18px;
+    text-decoration: none;
+    color: var(--text);
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.btn {
+    display: inline-block;
+    background: var(--blue);
+    color: #03111a !important;
+    padding: 12px 20px;
+    border-radius: 7px;
+    text-decoration: none;
+    font-weight: 900;
+    box-shadow: 0 8px 25px rgba(25,170,245,.2);
+}
+
+.btn:hover {
+    background: #65c8ff;
+}
+
+.outline {
+    background: transparent !important;
+    color: var(--blue) !important;
+    border: 1px solid var(--blue);
+    box-shadow: none;
+}
+
+/* HERO */
+
+.hero {
+    min-height: 700px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 45px;
+    align-items: center;
+
+    background:
+        radial-gradient(circle at 20% 25%, rgba(25,170,245,.16), transparent 35%),
+        linear-gradient(135deg,#03090d,#0b1923);
+}
+
+.kicker {
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--blue);
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.hero h1 {
+    font-size: clamp(55px, 8vw, 92px);
+    line-height: .86;
+    letter-spacing: -5px;
+    margin: 12px 0;
+}
+
+.hero h1 span {
+    color: var(--blue);
+}
+
+.hero h2 {
+    font-size: 25px;
+    margin: 0 0 15px;
+}
+
+.hero p {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 600px;
+}
+
+.buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 28px;
+}
+
+/* HERO PHOTO */
+
+.photo {
+    height: 520px;
+    border: 1px solid #3a5364;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 25px 70px rgba(0,0,0,.55);
+    background: #101a22;
+}
+
+.photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.badge {
+    position: absolute;
+    bottom: 18px;
+    left: 18px;
+    background: rgba(6,16,24,.92);
+    border: 1px solid #466174;
+    border-radius: 7px;
+    padding: 10px 14px;
+    font-weight: 800;
+}
+
+/* SECTIONS */
+
+section {
+    padding: 82px 0;
+}
+
+.title {
+    font-size: 40px;
+    line-height: 1.1;
+    margin: 7px 0 12px;
+}
+
+.lead {
+    color: var(--muted);
+    max-width: 760px;
+    font-size: 17px;
+}
+
+/* CARDS */
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    margin-top: 35px;
+}
+
+.card {
+    background: linear-gradient(145deg,#0e1c26,#09131a);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 30px;
+}
+
+.card h3 {
+    font-size: 28px;
+    margin: 5px 0;
+}
+
+.card p,
+.card li {
+    color: #c2ced6;
+}
+
+.card li {
+    margin: 8px 0;
+}
+
+/* BUILD SECTION */
+
+.band {
+    background:
+        linear-gradient(90deg,#061018,#0d2230,#061018);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.bandgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 35px;
+    align-items: center;
+}
+
+.specs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.spec {
+    padding: 14px 16px;
+    background: #07131b;
+    border-left: 3px solid var(--blue);
+}
+
+.spec strong {
+    display: block;
+    font-size: 20px;
+}
+
+.spec span {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+/* NOTES */
+
+.note {
+    margin-top: 28px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 23px;
+    background: rgba(255,255,255,.02);
+}
+
+/* CONTACT */
+
+.contact {
+    text-align: center;
+    background:
+        radial-gradient(circle,rgba(25,170,245,.12),transparent 52%);
+}
+
+.contact h2 {
+    font-size: 46px;
+    line-height: 1.05;
+    margin: 8px 0 12px;
+}
+
+.email {
+    display: block;
+    color: var(--blue);
+    font-size: 21px;
+    font-weight: 800;
+    text-decoration: none;
+    margin: 20px 0;
+}
+
+/* FOOTER */
+
+footer {
+    text-align: center;
+    border-top: 1px solid var(--line);
+    padding: 28px;
+    color: #718492;
+    font-size: 13px;
+}
+
+/* MOBILE */
+
+@media(max-width:800px) {
+
+    nav a:not(.btn) {
+        display: none;
+    }
+
+    .hero {
+        grid-template-columns: 1fr;
+        padding: 65px 0;
+    }
+
+    .photo {
+        height: 390px;
+    }
+
+    .grid,
+    .bandgrid {
+        grid-template-columns: 1fr;
+    }
+
+    .hero h1 {
+        letter-spacing: -3px;
+    }
+
+    .specs {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- NAVIGATION -->
+
+<header>
+<div class="container nav">
+
+<div class="logo">
+BDW <span>COILS</span>
+</div>
+
+<nav>
+<a href="#coils">COILS</a>
+<a href="#build">BUILD</a>
+<a href="#160m">160M</a>
+<a href="#videos">VIDEOS</a>
+
+<a class="btn"
+href="mailto:N4BDW73@GMAIL.COM?subject=BDW%20Coils%20Inquiry">
+CONTACT N4BDW
+</a>
+
+</nav>
+
+</div>
+</header>
+
+
+<!-- HERO -->
+
+<section class="hero">
+
+<div class="container">
+
+<div class="kicker">
+Hand-Built • Field Tested • SSB
+</div>
+
+<h1>
+BDW<br>
+<span>COILS</span>
+</h1>
+
+<h2>
+More bands. One portable antenna system.
+</h2>
+
+<p>
+Hand-wound portable antenna coils built by N4BDW for operators
+who want practical access to additional bands. Quality materials,
+serviceable construction, and continuity testing before shipment.
+</p>
+
+<div class="buttons">
+
+<a class="btn"
+href="mailto:N4BDW73@GMAIL.COM?subject=BDW%20Coils%20Inquiry">
+CONTACT N4BDW
+</a>
+
+<a class="btn outline" href="#coils">
+SEE THE COILS
+</a>
+
+</div>
+
+</div>
+
+
+<div class="photo">
+
+<img
+src="bdw-coil.jpg"
+alt="BDW portable antenna coil">
+
+<div class="badge">
+BDW Coil • Portable SSB
+</div>
+
+</div>
+
+</section>
+
+
+<!-- COILS -->
+
+<section id="coils">
+
+<div class="container">
+
+<div class="kicker">
+Two Options
+</div>
+
+<h2 class="title">
+Choose Your Coil
+</h2>
+
+<p class="lead">
+The standard BDW Coil is built for broad portable use.
+The Buddy Coil keeps the same basic concept in a smaller package
+for operators who want a compact backpack or case setup.
+</p>
+
+
+<div class="grid">
+
+
+<article class="card">
+
+<div class="kicker">
+Full-Size Portable Coil
+</div>
+
+<h3>
+The BDW Coil
+</h3>
+
+<p>
+Inspired by the W0BNC design and modified by N4BDW
+for ease of use and serviceability.
+</p>
+
+<ul>
+
+<li>Designed for SSB operation</li>
+
+<li>Works with 17' and 25' whips</li>
+
+<li>12-inch coil build</li>
+
+<li>40m, 60m, 80m and 160m capability</li>
+
+<li>Separate silicone shorting wire</li>
+
+<li>Continuity tested before shipment</li>
+
+</ul>
+
+</article>
+
+
+<article class="card">
+
+<div class="kicker">
+Compact Field Option
+</div>
+
+<h3>
+The Buddy Coil
+</h3>
+
+<p>
+A shorter version for operators who want
+a small, packable setup.
+</p>
+
+<ul>
+
+<li>Designed for 30m and 40m</li>
+
+<li>Backpack friendly</li>
+
+<li>Fits an Apache-style case</li>
+
+<li>Works with 17' or 25' whips</li>
+
+<li>Silicone jumper lets the whip remain fully extended</li>
+
+</ul>
+
+</article>
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- BUILD -->
+
+<section id="build" class="band">
+
+<div class="container bandgrid">
+
+<div>
+
+<div class="kicker">
+Built At The Bench
+</div>
+
+<h2 class="title">
+Simple Materials.<br>
+Thoughtful Construction.
+</h2>
+
+<p class="lead">
+Every coil is wound by hand. Hardware is selected
+for durability, serviceability and field use rather
+than mass production.
+</p>
+
+</div>
+
+
+<div class="specs">
+
+<div class="spec">
+<strong>316</strong>
+<span>Stainless hardware</span>
+</div>
+
+<div class="spec">
+<strong>17 ga</strong>
+<span>Electric-fence wire</span>
+</div>
+
+<div class="spec">
+<strong>Nylon</strong>
+<span>Wire guides</span>
+</div>
+
+<div class="spec">
+<strong>Silicone</strong>
+<span>Replaceable jumper</span>
+</div>
+
+<div class="spec">
+<strong>100W</strong>
+<span>SSB tested</span>
+</div>
+
+<div class="spec">
+<strong>QC</strong>
+<span>Continuity checked</span>
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- 160M -->
+
+<section id="160m">
+
+<div class="container">
+
+<div class="kicker">
+Go Lower
+</div>
+
+<h2 class="title">
+Yes — Even 160 Meters.
+</h2>
+
+<p class="lead">
+For the 160m configuration, the whip is removed and a
+75-foot length of 26-gauge silicone wire is connected
+to the top of the coil and elevated on a mast.
+</p>
+
+<div class="note">
+
+<strong>
+N4BDW's reported field setup:
+</strong>
+
+75' of 26-gauge silicone wire elevated to the top
+of a 40' Spiderbeam mast, with no tuner used.
+Near 1:1 SWR was reported from 1.85–1.89 MHz.
+A 20' mast configuration is also being tested.
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- VIDEOS -->
+
+<section id="videos" class="band">
+
+<div class="container">
+
+<div class="kicker">
+See Them In The Field
+</div>
+
+<h2 class="title">
+BDW Coils on YouTube
+</h2>
+
+<p class="lead">
+Videos featuring the Buddy Coil, BDW coils,
+and field operation.
+</p>
+
+
+<div class="grid">
+
+
+<article class="card">
+
+<div class="kicker">
+Buddy Coil
+</div>
+
+<h3>
+40m Made Easy
+</h3>
+
+<p>
+Introducing the Buddy Coil from BDW Coils.
+</p>
+
+<a class="btn"
+target="_blank"
+href="https://youtu.be/95oOZy6F4mA">
+WATCH VIDEO
+</a>
+
+</article>
+
+
+<article class="card">
+
+<div class="kicker">
+Field Activation
+</div>
+
+<h3>
+40m Activation
+</h3>
+
+<p>
+A 40m activation featuring a new coil
+and new spike mount.
+</p>
+
+<a class="btn"
+target="_blank"
+href="https://youtu.be/FuKrUg5yNWw">
+WATCH VIDEO
+</a>
+
+</article>
+
+
+<article class="card">
+
+<div class="kicker">
+Coil Demonstration
+</div>
+
+<h3>
+New Coil From N4BDW
+</h3>
+
+<p>
+A video featuring a new coil from N4BDW.
+</p>
+
+<a class="btn"
+target="_blank"
+href="https://www.youtube.com/watch?v=fHtlg4IOaDo">
+WATCH VIDEO
+</a>
+
+</article>
+
+
+<article class="card">
+
+<div class="kicker">
+More Videos
+</div>
+
+<h3>
+Search YouTube
+</h3>
+
+<p>
+Find additional videos mentioning
+BDW Coils and N4BDW.
+</p>
+
+<a class="btn outline"
+target="_blank"
+href="https://www.youtube.com/results?search_query=%22BDW+Coil%22+N4BDW">
+SEARCH YOUTUBE
+</a>
+
+</article>
+
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- CONTACT -->
+
+<section class="contact" id="contact">
+
+<div class="container">
+
+<div class="kicker">
+Want One?
+</div>
+
+<h2>
+Let's Build Your Next<br>
+Portable Setup.
+</h2>
+
+<p class="lead" style="margin:auto">
+Reach out directly to N4BDW for availability,
+questions and coil details.
+</p>
+
+<a class="email"
+href="mailto:N4BDW73@GMAIL.COM?subject=BDW%20Coils%20Inquiry">
+N4BDW73@GMAIL.COM
+</a>
+
+<a class="btn"
+href="mailto:N4BDW73@GMAIL.COM?subject=BDW%20Coils%20Inquiry">
+CONTACT N4BDW
+</a>
+
+</div>
+
+</section>
+
+
+<footer>
+
+© BDW Coils • N4BDW • Hand-Built Portable Antenna Coils
+
+</footer>
+
+</body>
+</html>
