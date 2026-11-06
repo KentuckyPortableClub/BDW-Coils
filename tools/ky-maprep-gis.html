@@ -84,6 +84,9 @@ details summary{cursor:pointer;font-size:11px;color:var(--muted);margin-top:4px}
 #updDot{display:none;margin-left:5px;background:#e53935;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px}
 #updDot.on{display:inline-block}
 .tb button.helpb{background:#fff;color:var(--ink);border-color:#fff}
+.c-ac{float:right;font:700 15px Georgia,serif}
+.cand-opts{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;margin:6px 0}
+.b-open{background:#dff0e4;color:var(--green)}.b-unk{background:#eee;color:#555}.b-small{background:#fff3cd;color:#7a5b00}
 .upd-sec{font:900 10.5px Arial;letter-spacing:1.2px;color:var(--muted);margin:14px 0 4px;text-transform:uppercase}
 .upd-row{display:flex;gap:6px;align-items:baseline;padding:5px 0;border-bottom:1px dashed #e3d9c2;font-size:12.5px}
 .upd-row .n{flex:1;min-width:0}
@@ -124,6 +127,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #2a6f
     <button data-m="area" title="Measure an area in acres">AREA</button>
     <button data-m="sketch" title="Draw a proposed boundary, then export it">SKETCH</button>
     <button data-m="pin" title="Drop a pin, then check it against boundaries">PIN</button>
+    <button data-p="cand" id="candB" title="Public land in view with no POTA park on it">FIND NEW</button>
     <button data-p="updates" id="updB" title="Look for new or changed layers">UPDATES<span id="updDot"></span></button>
     <button data-p="help" class="helpb" title="How to use this map">? HELP</button>
   </div>
@@ -384,6 +388,9 @@ function copyText(v, b) {
 /* ---------- geometry helpers ---------- */
 const polyParts = g => !g ? [] : g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
 const isPoly = g => g && (g.type === 'Polygon' || g.type === 'MultiPolygon');
+/* "does this shape touch the box?" — bbox test first: turf 7.1 booleanDisjoint wrongly reports some far-away parts as touching */
+const bbOverlap = (a, b) => a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+const touchesBox = (env, f) => bbOverlap(turf.bbox(f), env) && !turf.booleanDisjoint(turf.bboxPolygon(env), f);
 const acresOf = g => isPoly(g) ? turf.area({type: 'Feature', geometry: g, properties: {}}) / ACRE : 0;
 function edgeInfo(pt, geom) {   /* inside?, miles to nearest edge, nearest point */
   const P = turf.point(pt), f = {type: 'Feature', geometry: geom, properties: {}};
@@ -519,8 +526,8 @@ async function checkPin() {
         if (st.cfg.id === 'padus_fee') prm.where = "State_Nm='KY'";
         fs = await arcQuery(st.cfg.rest_url, prm);
       } else {
-        const fc = st.data || await st.obj.load(), box = turf.bboxPolygon(env);
-        fs = (fc.features || []).filter(f => isPoly(f.geometry) && !turf.booleanDisjoint(box, f));
+        const fc = st.data || await st.obj.load();
+        fs = (fc.features || []).filter(f => isPoly(f.geometry) && touchesBox(env, f));
       }
       return {st, fs: fs.filter(f => isPoly(f.geometry))};
     } catch (e) { return {st, err: e.message || String(e)}; }
@@ -720,6 +727,7 @@ function updateCredits() {
   const cr = new Set([BASE[baseName].c]);
   if (POTA.on) cr.add('Parks on the Air (api.pota.app)');
   Object.values(LY).forEach(s => { if (s.on) cr.add(s.cfg.credit || s.cfg.agency); });
+  if (typeof candLayer !== 'undefined' && candLayer.getLayers().length) candSrcUsed.forEach(c => cr.add(c));
   $('#credT').textContent = 'Data: ' + [...cr].join(' · ');
 }
 function about() {
@@ -747,6 +755,7 @@ $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') e.targ
 /* ---------- toolbar, panels, search ---------- */
 $('#tools').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.p === 'cand') { findCandidates(); return; }
   if (b.dataset.p === 'updates') { openUpdates(); return; }
   if (b.dataset.p === 'help') { help(); return; }
   if (b.dataset.p === 'layers') { const p = $('#layersP'); p.classList.toggle('hide'); if (innerWidth <= 720 && !p.classList.contains('hide')) $('#resP').classList.add('hide'); return; }
@@ -919,12 +928,202 @@ $('#res').addEventListener('click', async e => {
   }
 });
 
+
+/* ---------- FIND NEW: public land in view with no POTA park on it ----------
+   Pulls official public-land shapes for the current view, drops any that already hold a POTA pin
+   (inside, or within CAND_NEAR_MI of the edge), merges the same land seen in two layers, and lists the rest.
+   PAD-US: Fee category only (Proclamation lines are not ownership). Private land and closed land hidden by default.
+   Private owner names are never shown. Research helper: every candidate still needs the agency + POTA rules check. */
+const CAND_SRC = ['kyl_state_parks_boundary', 'kyl_kdfwr_hunting', 'kyl_snp', 'kyl_sna', 'ky_state_forests', 'ky_hlcf', 'ky_wild_rivers', 'kpc_ky_usace', 'padus_fee'];   /* priority: KY live first, PAD-US last */
+const CAND_NEAR_MI = 0.25, CAND_SMALL_AC = 5, CAND_MIN_ZOOM = 9, CAND_MAX_LIST = 150;
+const candLayer = L.featureGroup().addTo(map);
+let candPins = 0, cands = [], candRaw = [], candOpt = {closed: false, priv: false, small: true, local: true, hideNamed: false}, candRunning = false, candSrcUsed = [];
+const ACC_TXT = {OA: 'Open to public', RA: 'Restricted access', XA: 'Closed to public', UK: 'Access unknown'};
+function candAccess(p) {
+  const v = fieldVal(p, 'Pub_Access') ?? fieldVal(p, 'PUB_ACCESS') ?? fieldVal(p, 'AreaOpen');
+  if (v == null || v === '') return 'UK';
+  const s = String(v).trim().toUpperCase();
+  if (ACC_TXT[s]) return s;
+  if (/^(YES|OPEN)/.test(s)) return 'OA';
+  if (/^(NO|CLOSED)/.test(s)) return 'XA';
+  if (/RESTRICT|PERMIT|APPOINT|LIMIT/.test(s)) return 'RA';
+  return 'UK';
+}
+const NAME_STOP = /\b(the|of|and|at|state|national|natural|nature|historic(al)?|site|park|parks|wildlife|management|area|areas|wma|preserve|forest|recreation(al)?|refuge|sanctuary|center|fee|tract|unit|ky|resort|fishing|public|hunting|commission|corps|engineers|us|u s)\b/g;
+const normName = n => String(n || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9 ]+/g, ' ').replace(NAME_STOP, ' ').replace(/\s+/g, ' ').trim();
+let potaNorm = null;
+/* An existing KY POTA park whose name says it is the same place. Exact match after the stop words, or the shorter name
+   (at least two words) is a whole-word prefix or suffix of the longer: "Dale Hollow Lake WMA" ~ "Dale Hollow State Park".
+   A looser substring rule hid real parks (Jefferson Memorial Forest, Cumberland Forest WMA, Island Park), so matches are
+   only flagged, never hidden, unless the user ticks the filter. */
+function nameMatch(name) {
+  if (!potaNorm) potaNorm = POTA.list.map(p => ({p, n: normName(p.name), w: normName(p.name).split(' ')})).filter(x => x.n.length >= 4);
+  const n = normName(name); if (n.length < 4) return null;
+  const w = n.split(' ');
+  const hit = potaNorm.find(x => {
+    if (x.n === n) return true;
+    const [sh, lo] = x.w.length <= w.length ? [x.w, w] : [w, x.w];
+    if (sh.length < 2) return false;
+    const S = sh.join(' ');
+    return lo.slice(0, sh.length).join(' ') === S || lo.slice(-sh.length).join(' ') === S;
+  });
+  return hit ? hit.p : null;
+}
+/* Owner / manager text may name a private person ("KDFWR & Adair Family", "McCoy Delora Trustee" are real PAD-US rows).
+   Government ownership types pass through; anything else is split into parts and a part is kept only if it reads as a
+   public body, institution or NGO. Everything else becomes "private party (withheld)". Used for the cards and the export. */
+const GOV_TYPES = /^(FED|STAT|LOC|DIST|DESG)$/i;
+const PUBLIC_WORDS = /\b(city|county|counties|fiscal court|state|commonwealth|kentucky|u\.?s\.?a?|united states|national|federal|department|dept|division|office|district|university|college|school|authority|metro|metropolitan|board|parks?|recreation|commission|corps|service|government|town|village|conservancy|land trust|trust|foundation|society|association|coalition|friends of|conservation|conservancy|nature|audubon|tva|tennessee valley|church|settlement|preserve|sanctuary|arboretum|museum|library|zoo|airport|utilities|water|sewer|hospital|wildlife|resources|forestry|cabinet|energy|army|unknown|multiple|private individual|private|ngo|owner|recorded|r\/w|cinti|louisville|lexington|nashville|huntington|breaks interstate|homeplace)\b/i;
+function scrubOwner(txt, ownType) {
+  if (!txt) return '';
+  if (GOV_TYPES.test(String(ownType || ''))) return String(txt);
+  const parts = String(txt).split(/\s*[&;]\s*/).map(x => x.trim()).filter(Boolean);   /* joint owners are written 'A & B' or 'A; B' */
+  const out = parts.map(x => PUBLIC_WORDS.test(x) ? x : 'private party (withheld)');
+  return out.filter((v, i, a) => a.indexOf(v) === i).join(' & ');
+}
+function candInfo(st, f) {   /* name, owner/manager text, designation, private?, acres */
+  const p = f.properties || {}, id = st.cfg.id;
+  const priv = id === 'padus_fee' && /^PVT$/i.test(String(fieldVal(p, 'Own_Type') || ''));
+  let owner = '';
+  const ot = fieldVal(p, 'Own_Type'), mt = fieldVal(p, 'Mang_Type');
+  if (id === 'padus_fee') owner = priv ? 'Private (owner withheld)' : [scrubOwner(fieldVal(p, 'Loc_Own') || fieldVal(p, 'Own_Name'), ot), scrubOwner(fieldVal(p, 'Loc_Mang') || fieldVal(p, 'Mang_Name'), mt)].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · managed by ');
+  else owner = scrubOwner(fieldVal(p, 'MA_OWNER') || fieldVal(p, 'MNG_INST') || fieldVal(p, 'OWNER') || fieldVal(p, 'MANAGER') || st.cfg.agency || '', 'JNT');
+  const des = id === 'padus_fee' ? (fieldVal(p, 'Loc_Ds') || fieldVal(p, 'Des_Tp') || '') : (fieldVal(p, 'UNIT_TYPE') || (fieldVal(p, 'WMA') === 'Yes' ? 'WMA' : '') || '');
+  const recAc = +(fieldVal(p, 'GIS_Acres') ?? fieldVal(p, 'ACRES_CAL') ?? fieldVal(p, 'ACRES') ?? fieldVal(p, 'ABSOLUTE_ACREAGE') ?? 0) || 0;
+  const name = String(featName(st, f) || st.cfg.title);
+  return {name: /^unknown/i.test(name) ? name + ' (unnamed in source)' : name, owner: String(owner), des: String(des), priv, ac: recAc || acresOf(f.geometry)};
+}
+async function findCandidates() {
+  if (candRunning) return;
+  if (map.getZoom() < CAND_MIN_ZOOM) { toast('Zoom in to about one or two counties first (FIND NEW looks only at what is on screen).', 4500); return; }
+  if (!POTA.list.length) { toast('POTA pins have not loaded yet, so FIND NEW cannot tell which land is already a park.', 4500); return; }
+  candRunning = true; candLayer.clearLayers(); cands = [];
+  const b = map.getBounds(), env = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], simp = tolDeg(1);
+  const srcs = CAND_SRC.map(id => LY[id]).filter(Boolean);
+  candSrcUsed = srcs.map(st => /^See feature/i.test(st.cfg.credit || '') ? 'KPC curated copies of official boundaries' : (st.cfg.credit || st.cfg.agency));
+  let left = srcs.length; const prog = () => { const el = $('#res .note'); if (el && $('#resT').textContent === 'FIND NEW') el.textContent = `Looking for public land in view with no POTA park… waiting on ${left} of ${srcs.length} sources`; };
+  showRes('FIND NEW', `<p class="note">Looking for public land in view with no POTA park… (${srcs.length} official sources)</p>`);
+  const got = await Promise.all(srcs.map(async st => { try { return await (async () => {
+    try {
+      let fs;
+      if (kind(st.cfg) === 'geojson') {
+        const fc = st.data || await st.obj.load();
+        fs = (fc.features || []).filter(f => isPoly(f.geometry) && touchesBox(env, f));
+      } else {
+        const prm = {geometry: env.join(','), geometryType: 'esriGeometryEnvelope', spatialRel: 'esriSpatialRelIntersects', maxAllowableOffset: String(simp), geometryPrecision: '6'};
+        if (st.cfg.id === 'padus_fee') prm.where = "State_Nm='KY' AND Category='Fee'";
+        fs = await arcQuery(st.cfg.rest_url, prm);
+      }
+      return {st, fs: fs.filter(f => isPoly(f.geometry))};
+    } catch (e) { return {st, err: e.message || String(e)}; }
+  })(); } finally { left--; prog(); } }));
+  /* coverage is tested against ALL Kentucky POTA pins: a big multi-part WMA may have its pin outside the view */
+  const pad = 0.05, nearView = POTA.list.filter(p => p.lng > env[0] - pad && p.lng < env[2] + pad && p.lat > env[1] - pad && p.lat < env[3] + pad).length;
+  const kept = [];
+  got.forEach(({st, fs}) => (fs || []).forEach(f0 => {
+    /* keep only the parts of a multi-part shape that are actually in view (the Army Corps file stores a whole lake WMA as one shape) */
+    let f = f0, partial = false;
+    if (f0.geometry.type === 'MultiPolygon') {
+      const parts = f0.geometry.coordinates.filter(pc => touchesBox(env, turf.polygon(pc)));
+      if (!parts.length) return;
+      if (parts.length < f0.geometry.coordinates.length) { partial = true; f = {type: 'Feature', properties: f0.properties, geometry: parts.length === 1 ? {type: 'Polygon', coordinates: parts[0]} : {type: 'MultiPolygon', coordinates: parts}}; }
+    } else if (!touchesBox(env, f0)) return;
+    const info = candInfo(st, f0), acc = candAccess(f0.properties || {});
+    if (partial) { info.ac = acresOf(f.geometry); info.partial = true; }
+    info.local = st.cfg.id === 'padus_fee' && /^(LOC|DIST)$/i.test(String(fieldVal(f0.properties || {}, 'Own_Type') || ''));
+    info.match = nameMatch(info.name);
+    const bb = turf.bbox(f0), near = CAND_NEAR_MI / 50;   /* ~0.005° margin before the exact test */
+    let covered = null;
+    for (const p of POTA.list) {
+      if (p.lng < bb[0] - near || p.lng > bb[2] + near || p.lat < bb[1] - near || p.lat > bb[3] + near) continue;
+      const e = edgeInfo([p.lng, p.lat], f0.geometry);
+      if (e.inside || e.mi <= CAND_NEAR_MI) { covered = p; break; }
+    }
+    if (covered) return;
+    /* same land in two layers (e.g. a WMA in KDFWR and in PAD-US): keep the first (higher-priority) one */
+    let pt; try { pt = turf.pointOnFeature(f); } catch (e) { return; }
+    const dup = kept.find(k => turf.booleanPointInPolygon(pt, k.f));
+    if (dup) { if (!dup.also.includes(st.cfg.title)) dup.also.push(st.cfg.title); return; }
+    kept.push({st, f, info, acc, also: [], at: pt.geometry.coordinates});
+  }));
+  candRaw = kept; candPins = nearView; candRunning = false;
+  renderCandidates(got.filter(g => g.err), candPins);
+}
+function renderCandidates(errs, nPins) {
+  candLayer.clearLayers();
+  cands = candRaw.filter(c => (candOpt.closed || c.acc !== 'XA') && (candOpt.priv || !c.info.priv) && (candOpt.small || c.info.ac >= CAND_SMALL_AC) && (candOpt.local || !c.info.local) && (!candOpt.hideNamed || !c.info.match))
+    .sort((a, b) => b.info.ac - a.info.ac);
+  const hidden = candRaw.length - cands.length;
+  cands.forEach((c, i) => {
+    L.geoJSON(c.f, {style: {color: '#ff6d00', weight: 2.5, dashArray: '7 5', fillColor: '#ff6d00', fillOpacity: .12}, interactive: true})
+      .on('click', e => { L.DomEvent.stopPropagation(e); candCardFocus(i); })
+      .bindTooltip(c.info.name + ' · ' + fmt(c.info.ac, 1) + ' ac', {sticky: true}).addTo(candLayer);
+  });
+  const acBadge = c => c.acc === 'OA' ? '<span class="badge b-open">OPEN</span>' : c.acc === 'RA' ? '<span class="badge b-chg">RESTRICTED</span>' : c.acc === 'XA' ? '<span class="badge b-bad">CLOSED</span>' : '<span class="badge b-unk">ACCESS ?</span>';
+  let h = `<p><b>${cands.length} possible new park${cands.length === 1 ? '' : 's'}</b> in view <span class="note">(official public land with no POTA pin inside or within ${CAND_NEAR_MI} mi; ${nPins} POTA park${nPins === 1 ? '' : 's'} in or near view)</span></p>
+    <div class="cand-opts">
+      <label><input type="checkbox" data-co="closed" ${candOpt.closed ? 'checked' : ''}> show closed land</label>
+      <label><input type="checkbox" data-co="priv" ${candOpt.priv ? 'checked' : ''}> show private land</label>
+      <label><input type="checkbox" data-co="small" ${candOpt.small ? 'checked' : ''}> show under ${CAND_SMALL_AC} acres</label>
+      <label><input type="checkbox" data-co="local" ${candOpt.local ? 'checked' : ''}> show city &amp; county land</label>
+      <label><input type="checkbox" data-co="hideNamed" ${candOpt.hideNamed ? 'checked' : ''}> hide land named like an existing park</label>
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn2 g" data-c="again">SEARCH THIS VIEW AGAIN</button>${cands.length ? '<button class="btn2" data-c="all">EXPORT ALL (GEOJSON)</button>' : ''}<button class="btn2" data-c="clear">CLEAR</button></div>
+    ${hidden ? `<p class="note">${hidden} more hidden by the filters above.</p>` : ''}`;
+  errs.forEach(o => h += `<p class="warn">${esc(o.st.cfg.title)}: did not answer (${esc(o.err)}). Results may be missing land from it.</p>`);
+  if (!cands.length) h += '<p class="note">Nothing new here: every public-land shape in view already has a POTA park on or near it, or is filtered out. Pan or zoom out a little and SEARCH AGAIN.</p>';
+  cands.slice(0, CAND_MAX_LIST).forEach((c, i) => {
+    h += `<div class="card" data-cc="${i}"><span class="c-ac">${fmt(c.info.ac, c.info.ac < 10 ? 1 : 0)} ac</span><div class="src" style="color:#c25100">${esc(c.st.cfg.title)}</div>
+      <h3>${esc(c.info.name)}</h3>
+      <div>${acBadge(c)}${c.info.ac < CAND_SMALL_AC ? '<span class="badge b-small">SMALL</span>' : ''}${c.info.priv ? '<span class="badge b-bad">PRIVATE</span>' : ''}${c.info.local ? '<span class="badge b-unk">CITY / COUNTY</span>' : ''}${c.info.partial ? '<span class="badge b-unk">PART IN VIEW</span>' : ''}</div>
+      ${c.info.match ? `<div class="warn" style="margin:3px 0">Name matches ${esc(c.info.match.ref)} ${esc(c.info.match.name)}. Could be an outlying piece of that park. Check before treating it as new.</div>` : ''}
+      ${c.info.owner ? `<div class="note" style="margin:3px 0">${esc(c.info.owner)}</div>` : ''}
+      ${c.info.des ? `<div class="note" style="margin:3px 0">${esc(c.info.des)}</div>` : ''}
+      ${c.also.length ? `<div class="note" style="margin:3px 0">Also in: ${c.also.map(esc).join(', ')}</div>` : ''}
+      <div class="acts"><button class="btn2" data-c="zoom" data-ci="${i}">ZOOM</button><button class="btn2 g" data-c="pin" data-ci="${i}">PIN + CHECK</button><button class="btn2" data-c="gj" data-ci="${i}">GEOJSON</button><button class="btn2" data-c="kml" data-ci="${i}">KML</button></div></div>`;
+  });
+  if (cands.length > CAND_MAX_LIST) h += `<p class="note">Showing the ${CAND_MAX_LIST} largest. Zoom in to see the rest.</p>`;
+  h += `<p class="note">These are leads, not parks. Before submitting: confirm the land is public and accessible on the agency’s own pages, check the POTA rules for that kind of land, and make sure it isn’t already part of an existing park under another name. Acres are the source’s recorded figure where it has one, otherwise measured from a simplified outline.</p>`;
+  showRes('FIND NEW', h);
+  updateCredits();
+}
+function candCardFocus(i) {
+  const el = document.querySelector(`#res [data-cc="${i}"]`);
+  if (!el) return;
+  if ($('#resP').classList.contains('hide')) $('#resP').classList.remove('hide');
+  el.scrollIntoView({block: 'nearest', behavior: 'smooth'}); el.style.outline = '3px solid #ff6d00'; setTimeout(() => el.style.outline = '', 1500);
+  highlight(cands[i].f);
+}
+$('#res').addEventListener('change', e => {
+  const k = e.target.dataset.co; if (!k) return;
+  candOpt[k] = e.target.checked; renderCandidates([], candPins);
+});
+$('#res').addEventListener('click', e => {
+  const b = e.target.closest('[data-c]'); if (!b) return;
+  const a = b.dataset.c, c = cands[+b.dataset.ci];
+  if (a === 'again') { findCandidates(); return; }
+  if (a === 'clear') { candLayer.clearLayers(); cands = []; candRaw = []; hiLayer.clearLayers(); $('#res').innerHTML = '<p class="note">Cleared.</p>'; updateCredits(); return; }
+  if (a === 'all') {
+    const fc = {type: 'FeatureCollection', features: cands.map(c => ({type: 'Feature', geometry: c.f.geometry, properties: {name: c.info.name, acres: +c.info.ac.toFixed(2), access: ACC_TXT[c.acc], owner_or_manager: c.info.owner, designation: c.info.des, source: c.st.cfg.title + ' (' + (c.st.cfg.credit || '') + ')', also_in: c.also.join('; '), name_matches_pota: c.info.match ? c.info.match.ref + ' ' + c.info.match.name : '', status: 'CANDIDATE - not a POTA park; research lead only', found: new Date().toISOString().slice(0, 10)}}))};
+    download('possible-new-parks.geojson', JSON.stringify(fc, null, 1), 'application/geo+json'); return;
+  }
+  if (!c) return;
+  if (a === 'zoom') { highlight(c.f); map.fitBounds(L.geoJSON(c.f).getBounds(), {maxZoom: 16, padding: [20, 20]}); }
+  if (a === 'pin') {
+    /* the pin check only asks switched-on layers: switch on the candidate's own source so it is measured too */
+    if (LY[c.st.cfg.id] && !LY[c.st.cfg.id].on) { const cb = document.querySelector(`[data-l="${c.st.cfg.id}"]`); if (cb) cb.checked = true; toggleLayer(c.st.cfg.id, true); toast(c.st.cfg.title + ' switched on for the check.'); }
+    map.fitBounds(L.geoJSON(c.f).getBounds(), {maxZoom: 15, padding: [20, 20]}); setPin({lat: c.at[1], lng: c.at[0], name: 'Inside ' + c.info.name}, false); checkPin(); }
+  const props = {source: c.st.cfg.credit, layer: c.st.cfg.title, access: ACC_TXT[c.acc], status: 'CANDIDATE - not a POTA park'};
+  if (a === 'gj') downloadGeoJSON(c.f.geometry, c.info.name, props);
+  if (a === 'kml') downloadKML(c.f.geometry, c.info.name, 'Candidate (not a POTA park). ' + ACC_TXT[c.acc] + '. Source: ' + c.st.cfg.credit);
+});
+
 /* ---------- HELP (how-to page) ---------- */
 function help(section) {
   $('#modalB').className = 'box help';
   $('#modalB').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><h2>How to use the KY GIS Workbench</h2><button class="btn2 g" data-close-m>CLOSE</button></div>
   <p>This is one map with official Kentucky and federal public-land layers. Use it to research POTA parks: see what land is where, measure it, sketch a proposed boundary, and check whether a pin is inside the park.</p>
-  <div class="toc">${[['start', 'Quick start'], ['layers', 'Layers'], ['identify', 'Identify'], ['measure', 'Measure & area'], ['sketch', 'Sketch & export'], ['pin', 'Pin check'], ['search', 'Search'], ['updates', 'Updates'], ['phone', 'On a phone'], ['rules', 'Good to know']].map(([k, t]) => `<a href="#h-${k}" data-jump="${k}">${t}</a>`).join('')}</div>
+  <div class="toc">${[['start', 'Quick start'], ['layers', 'Layers'], ['identify', 'Identify'], ['measure', 'Measure & area'], ['sketch', 'Sketch & export'], ['pin', 'Pin check'], ['search', 'Search'], ['find', 'Find new parks'], ['updates', 'Updates'], ['phone', 'On a phone'], ['rules', 'Good to know']].map(([k, t]) => `<a href="#h-${k}" data-jump="${k}">${t}</a>`).join('')}</div>
 
   <h3 id="h-start">Quick start</h3>
   <ol><li>Type a POTA ref (like <b>US-10172</b>) or a park name in the search box and pick it. The map zooms to the park.</li>
@@ -966,6 +1165,15 @@ function help(section) {
   <ul><li>The search box takes Kentucky POTA refs or park names. A bare number like <b>10172</b> becomes US-10172.</li>
   <li>To share a park, add <code>?ref=US-10172</code> to the end of this page’s address.</li></ul>
 
+  <h3 id="h-find">Find new parks (public land with no POTA park)</h3>
+  <ul><li>Zoom in to about one or two counties, then tap <kbd>FIND NEW</kbd>. It checks the official public-land layers for what is on screen: state parks, WMAs, nature preserves, natural areas, state forests, Heritage Land tracts, wild-river corridors, Army Corps land and PAD-US. They don't need to be switched on.</li>
+  <li>Any shape that already has a POTA pin inside it, or within ¼ mile of its edge, is dropped. The same land showing up in two layers is listed once (“Also in: …”).</li>
+  <li>What is left shows as <b>orange dashed outlines</b> and a list, biggest first, with acres, owner or manager, and an <span class="badge b-open">OPEN</span> / <span class="badge b-chg">RESTRICTED</span> / <span class="badge b-unk">ACCESS ?</span> tag. Tap an outline to jump to its card.</li>
+  <li>Check boxes at the top filter closed land, private land, tiny pieces, city &amp; county land, and, if you tick it, land whose name matches an existing POTA park. Matches are shown with a warning by default, because a name alone can be wrong both ways. Private owner names are never shown.</li>
+  <li>A lake WMA stored as one big shape is cut down to the <b>part in view</b>, and its acres are measured for that part only.</li>
+  <li><b>PIN + CHECK</b> drops a pin inside the candidate and runs the pin check, which is handy for spotting that it is really part of a park you already have. <b>EXPORT ALL</b> saves the whole list as GeoJSON for your notes.</li>
+  <li>These are leads, not parks. A city ballfield or a utility tract can show up. Confirm with the agency and the POTA rules before submitting anything.</li></ul>
+
   <h3 id="h-updates">Updates (new or changed layers)</h3>
   <ul><li>Tap <kbd>UPDATES</kbd> in the top bar. A red number on it means something changed since you last looked.</li>
   <li><b>Your layers</b> shows whether each server answered, how many shapes it has in Kentucky (and what it had last time), and when it was last edited, if the server says. <span class="badge b-chg">CHANGED</span> marks a layer that changed since your last check.</li>
@@ -1005,7 +1213,7 @@ fetch(LAYERS_URL).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); re
   CAT = cat; buildPanel(); loadPota(); updateCredits(); updateDot();
   if (!UPD || Date.now() - UPD.result.when > 7 * 864e5) setTimeout(() => runUpdateCheck(true), 5000);
 }).catch(e => { $('#layerList').innerHTML = `<p class="warn">Could not load ${LAYERS_URL} (${esc(e.message)}). It must sit in the same folder as this page.</p>`; });
-window.KYGIS = {runUpdateCheck, renderUpdates, help, get UPD() { return UPD; }, map, LY, POTA, setMode, gotoRef, checkPin, sketch, setPin, identify, acresOf};   /* for testing in the console */
+window.KYGIS = {findCandidates, get cands() { return cands; }, runUpdateCheck, renderUpdates, help, get UPD() { return UPD; }, map, LY, POTA, setMode, gotoRef, checkPin, sketch, setPin, identify, acresOf};   /* for testing in the console */
 })();
 </script>
 </body>
