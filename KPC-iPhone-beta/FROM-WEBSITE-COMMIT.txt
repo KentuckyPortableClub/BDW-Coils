@@ -1,0 +1,3 @@
+3e700986  kpc-ft8.js, kpc-ft8.wasm, kpc-cat.js (copied as they are; kpc-cat.js has 6 NAT() edits)
+edc2cce6  kpc-logger-ft8.js + kpc-logger.js: the FT8 logic (slots, auto sequence Tx1-6, decode lists, logging) was
+          rewritten for the app in www/kpc-digi.js and www/kpc-log.js on the native sound + USB bridge, not copied.

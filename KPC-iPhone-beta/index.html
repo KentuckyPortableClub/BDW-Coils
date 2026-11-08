@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="KPC"><link rel="apple-touch-icon" href="img/kpc-logo.png">
+<meta name="color-scheme" content="dark light">
+<title>KPC</title>
+<link rel="stylesheet" href="app.css?v=20261106c">
+<script src="kpc-flavor.js?v=20261028b"></script>
+<script>try{if((window.KPC_FLAVOR&&KPC_FLAVOR.lite)||/[?&]lite=1/.test(location.search))document.documentElement.dataset.lite='1';}catch(e){}</script>
+<script>try{var t=localStorage.getItem('kpcTheme');if(t)document.documentElement.dataset.theme=t;document.documentElement.dataset.style=localStorage.getItem('kpcStyle')||'lodge';}catch(e){document.documentElement.dataset.style='lodge'}</script>
+</head>
+<body data-screen="log">
+<div id="intro" aria-hidden="true"><div class="rays"></div><div class="rings"><i></i><i></i><i></i></div>
+<img class="logo" src="img/kpc-logo.png" alt=""><div class="arch"><img src="img/n4kpc-arch.webp" alt=""><span class="sweep"></span></div>
+<div class="tag">KENTUCKY PORTABLE CLUB</div><div class="rule"></div><div class="sub">LOGGER · FT8 · CW · DIGITAL · APRS · REMOTE</div><div class="open">opening your logs<b>.</b><b>.</b><b>.</b></div></div>
+<script>/* Oct 25 (Brandon: 'open on the N4KPC logo with some animation'); Oct 26: 'longer intro then to my logs page' = ~3.4 s, then the MY LOGS page.
+   A tap skips it; not for --headless, the builders' tests or a second start within 10 min. window.KPC_FRESH = this start showed the opening (kpc-log.js opens MY LOGS). */
+(function(){var e=document.getElementById('intro'),q=location.search,go=function(){if(!e||e.classList.contains('out'))return;e.classList.add('out');setTimeout(function(){e.remove()},650)};
+var last=0;try{last=+sessionStorage.getItem('kpcIntro')||0;sessionStorage.setItem('kpcIntro',Date.now())}catch(x){}
+if(navigator.webdriver||/[?&](headless|fake)=1/.test(q)||Date.now()-last<600000){e.remove();return}
+window.KPC_FRESH=true;e.onclick=go;setTimeout(go,matchMedia('(prefers-reduced-motion: reduce)').matches?900:3400)})();</script>
+
+<div class="embers" aria-hidden="true"><i style="--x:6%;--d:0s;--t:9s"></i><i style="--x:15%;--d:3.1s;--t:11s"></i><i style="--x:27%;--d:6s;--t:10s"></i><i style="--x:38%;--d:1.4s;--t:12s"></i><i style="--x:52%;--d:4.3s;--t:9.5s"></i><i style="--x:63%;--d:7.6s;--t:11.5s"></i><i style="--x:74%;--d:2.2s;--t:10.5s"></i><i style="--x:86%;--d:5.4s;--t:12.5s"></i><i style="--x:94%;--d:8.8s;--t:10s"></i></div>
+<header class="top">
+  <span class="badge">KPC</span>
+  <span class="ttl" id="ttl">Log</span>
+  <b class="clk" id="utc">--:--:--</b>
+  <span class="state" id="rxState" title="Sound: off, listening, or transmitting">OFF</span>
+  <button type="button" class="ic" id="look" aria-label="Switch light or dark">◐</button>
+</header>
+
+<main>
+
+<!-- ========================= MY LOGS (Oct 26: its own page, opened after the opening) ========================= -->
+<section class="scr" id="scrLogs" aria-label="My logs"><div class="opspage" id="lgOps"></div></section>
+
+<!-- ========================= LOG ========================= -->
+<section class="scr" id="scrLog" aria-label="Log">
+  <button type="button" class="logbar" id="lgBar" data-oplist="1" title="My logs: open another log or start a new one"><span class="i">📒</span><span class="t"><i>MY LOGS</i><b id="lgBarN">Every contact</b></span><span class="c" id="lgBarC">0 contacts</span><span class="g">ALL MY LOGS ›</span></button>
+  <div class="strip" id="lgStrip">
+    <span class="kv"><i>TODAY</i><b id="lgN">0</b></span>
+    <span class="kv"><i>ALL</i><b id="lgAll">0</b></span>
+    <span class="kv" id="lgGoalW" hidden><i>GOAL</i><b id="lgGoal">0/10</b></span>
+    <span class="kv"><i>LAST</i><b id="lgLast">—</b></span>
+  </div>
+
+  <div class="lgwrap">
+    <div class="list log" id="lgList" role="table" aria-label="Contacts"></div>
+    <aside class="lgsp" id="lgSpW" aria-label="Spots">
+      <div class="strip"><span class="kv"><i>SPOTS</i><b id="lgSpN">0</b></span><button type="button" class="chip set" id="lgSpAll">ALL SPOTS + FILTERS ›</button></div>
+      <div class="list log" id="lgSp" role="table" aria-label="Spots"></div>
+    </aside>
+  </div>
+
+  <div class="dock" id="lgDock">
+    <div class="chips">
+      <button type="button" class="chip mono" id="dkFreq" title="Band, mode and your park number — tap to change">14.074 FT8</button>
+      <button type="button" class="chip" id="dkRole" title="Activating a park or hunting from home">🏕 ACT</button>
+      <button type="button" class="chip p2p" id="dkP2p" title="Park to park: put their park number in fast">🌲 P2P</button>
+      <button type="button" class="chip" id="dkMore" title="More: park number, name, notes">✏️</button>
+      <button type="button" class="chip" id="dkSet" title="My station and radio settings">⚙</button>
+    </div>
+    <form class="entry" id="lgForm" autocomplete="off">
+      <label class="e call">CALL<input id="eCall" autocapitalize="characters" spellcheck="false" enterkeyhint="done" placeholder="K4TEST"></label>
+      <label class="e">SENT<input id="eRs" inputmode="numeric" maxlength="3"></label>
+      <label class="e">RCVD<input id="eRr" inputmode="numeric" maxlength="3"></label>
+      <label class="e sta" id="eStW">STATE<input id="eSt" autocapitalize="characters" spellcheck="false" maxlength="2" enterkeyhint="done"></label>
+      <button type="button" class="ic sm" id="eClr" aria-label="Clear the line">⌫</button>
+      <button type="submit" class="go" id="eGo" aria-label="Log this contact">⬆</button>
+    </form>
+    <div class="look" id="eLook"></div>
+  </div>
+</section>
+
+<!-- ========================= DIGI ========================= -->
+<section class="scr" id="scrDigi" aria-label="FT8 and digital modes">
+  <div class="strip modes" id="modeStrip" role="group" aria-label="Mode">
+    <span class="chips" id="modeChips"></span>
+    <button type="button" class="chip set" id="dgSet" title="Settings for this mode">⚙ <span id="dgSetM">FT8</span></button>
+    <span class="kv lvk" title="Incoming sound from the radio: keep it in the green"><i>RX LEVEL</i><span class="lvbar"><i id="dgLvlBar"></i></span><b id="dgLvl">—</b><em id="dgLvlW"></em></span>
+  </div>
+  <div class="dgwrap" id="dgFt">
+  <div class="col a">
+
+    <div class="dialrow">
+      <select id="dgBand" aria-label="Band" class="selc"></select>
+      <b class="mono dial" id="dgDial">14.074</b>
+      <span class="slot"><i id="dgSlotBar"></i><span id="dgSlotT">slot</span></span>
+    </div>
+    <div class="chips spstrip" id="dgSpots" hidden aria-label="FT8 / FT4 parks spotted on this band"></div>
+    <div class="st bad tunew" id="dgTuneW" hidden role="alert"></div>
+
+    <div class="wfw">
+      <canvas id="dgWf" height="190" aria-label="Waterfall: tap to listen there, hold to move your transmit frequency"></canvas>
+      <canvas id="dgSc" height="20"></canvas>
+      <div class="wfoff" id="dgWfOff"><button type="button" class="gold big" id="dgStart">🎧 START LISTENING</button><span>Plug the radio's data cable in, turn the radio on, then press START.</span></div>
+    </div>
+
+    <div class="hzrow">
+      <label class="kv hzi rx" title="Where I listen (Hz): type a number and press Enter, or tap the waterfall"><i>RX</i><input class="mono" id="dgRxT" inputmode="numeric" maxlength="4" value="1500" enterkeyhint="done"></label>
+      <label class="kv hzi tx" title="Where I transmit (Hz): type a number and press Enter, or hold on the waterfall"><i>TX</i><input class="mono" id="dgTxT" inputmode="numeric" maxlength="4" value="1500" enterkeyhint="done"></label>
+      <button type="button" class="chip" id="dgSpan" title="Waterfall width: the whole passband, or zoom in around where you transmit to find a clear spot">↔ 200–2800</button>
+      <label class="ck"><input type="checkbox" id="dgHold"> 🔒 Hold TX</label>
+    </div>
+
+    <div class="btns">
+      <button type="button" class="b tx" id="dgEn">ENABLE TX</button>
+      <button type="button" class="b halt" id="dgHalt">HALT</button>
+      <button type="button" class="b" id="dgTune">TUNE</button>
+      <button type="button" class="b cq" id="dgCq">📣 CQ</button>
+    </div>
+    <!-- Oct 30 (Brandon: 'auto ft4-8 option … with longer cq') -->
+    <div class="btns autob">
+      <button type="button" class="b" id="dgRun" title="Activating: CQ, answer each caller, log, CQ again, by itself">🔁 AUTO RUN</button>
+      <button type="button" class="b" id="dgHunt" title="Hunting: call the parks it hears that you have not worked today, by itself">🎯 AUTO HUNT</button>
+      <button type="button" class="b" id="dgBoth" title="Both: call CQ, and when a park you have not worked shows up, work it, then CQ again">🔀 AUTO BOTH</button>
+    </div>
+    <div class="st" id="dgAutoSt" hidden></div>
+
+    <div class="dxrow">
+      <label class="e">DX CALL<input id="dgDx" autocapitalize="characters" spellcheck="false"></label>
+      <label class="e">GRID<input id="dgDxG" autocapitalize="characters" spellcheck="false" maxlength="6"></label>
+      <label class="e">MY RPT<input id="dgRpt" inputmode="numeric" maxlength="3" title="The report I send them"></label>
+      <label class="e">THEIR RPT<input id="dgRr" readonly tabindex="-1" title="The report they sent me"></label>
+      <label class="ck"><input type="checkbox" id="dgAuto" checked> Auto</label>
+    </div>
+
+    <!-- Brandon Oct 22: 'where is the box that shows people calling me and me calling them… split the TX1-6 box and have that to the right' -->
+    <div class="txrow">
+      <div class="txm" id="dgTxm"></div>
+      <div class="qso" id="dgQso" aria-label="This contact: who is calling you and what you sent">
+        <div class="qh"><button type="button" class="qclr" id="dgQsoClr" title="Clear this box: the contact in hand and who called">CLEAR</button><b id="dgQsoDx">NO CONTACT</b><span id="dgQsoR"></span></div>
+        <div class="ql" id="dgQsoL"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col b">
+    <div class="strip tabs2" role="group" aria-label="Which list">
+      <button type="button" class="chip on" data-list="band">BAND ACTIVITY <small id="dgCnt"></small></button>
+      <button type="button" class="chip" id="dgPark" title="Show only park activators">🌲 PARKS</button>
+    </div>
+    <div class="list dec" id="dgBandL" aria-label="Band activity"></div>
+    <div class="list dec" id="dgRxL" hidden aria-label="Stations near your frequency and your own contact"></div>
+  </div>
+  </div>
+
+  <!-- APRS (on the mode frame) -->
+  <div id="aprsPanel" hidden>
+    <div class="dialrow">
+      <select id="apBand" class="selc" aria-label="APRS band"></select>
+      <b class="mono dial" id="apDial">144.390</b>
+      <span class="kv"><i>HEARD</i><b id="apN">0</b></span>
+    </div>
+    <div class="st" id="apTnc" hidden></div>
+    <div class="offline" id="apOff"><button type="button" class="gold big" id="apStart">🎧 START LISTENING</button><span>Plug the radio's data cable in, set it to 144.390 FM, then press START.</span></div>
+    <div class="st bad" id="apWhy" hidden></div>
+    <div class="btns">
+      <button type="button" class="b gold" id="apBeacon">📡 BEACON NOW</button>
+      <button type="button" class="b" id="apMsg">✉ MESSAGE</button>
+      <button type="button" class="b" id="apView">🗺 MAP</button>
+      <button type="button" class="b" id="apTncB">📶 TNC</button>
+    </div>
+    <div class="st" id="apMe"></div>
+    <div class="st ok" id="apIg" hidden></div>
+    <canvas id="apMap" hidden aria-label="Stations around you by distance and direction"></canvas>
+    <canvas id="apSat" hidden aria-label="Stations on a satellite map"></canvas>
+    <div class="list dec" id="apList" aria-label="Stations heard on APRS"></div>
+    <div class="list dec" id="apMsgs" hidden aria-label="APRS messages"></div>
+  </div>
+</section>
+
+<!-- ========================= SPOTS (the spot frame: every source feeds one list) ========================= -->
+<section class="scr" id="scrSpots" aria-label="Spots">
+  <div class="strip">
+    <span class="kv"><i>SPOTS</i><b id="spN">0</b></span>
+    <button type="button" class="chip set" id="spFilt" title="Bands, modes, age, watchlist">⚙ FILTERS</button>
+    <button type="button" class="chip" id="spScan" title="Step the radio through the spots shown, one every few seconds (needs the radio connected)">▶ SCAN</button>
+ <button type="button" class="chip" id="spProp" title="Solar flux, Kp, a band-by-band guess and the day / night map">☀ CONDITIONS</button>
+    <button type="button" class="chip" id="spHeard" title="Who heard me in the last 30 minutes (PSKReporter: FT8, FT4, CW skimmers…)">📡 WHO HEARD ME</button>
+    <span class="chips" id="spSrc"></span>
+  </div>
+  <div class="bdstrip" id="spBands" hidden aria-label="Spots per band"></div>
+  <div class="list log" id="spList" role="table" aria-label="Spots"></div>
+  <p class="hint">Tap a spot: the radio goes there (CAT) and the log line fills in. ★ = a park you have not hunted yet · ✓ = worked before · 👀 = on your watchlist. <b>📶 CQ POTA on my FT8</b> = parks your own FT8 screen hears calling (no internet needed).</p>
+</section>
+
+<!-- ========================= REMOTE (the phone, when on the link to the home PC) ========================= -->
+<section class="scr" id="scrRemote" data-lite="off" aria-label="Remote: the home PC's radio from this phone">
+  <div class="strip">
+    <span class="kv"><i>STATION</i><b id="rmSt">—</b></span>
+    <span class="kv"><i>LINK</i><b id="rmMs">—</b></span>
+    <span class="state" id="rmState">OFF</span>
+  </div>
+  <div class="st" id="rmCat">Radio not connected on the PC</div>
+  <button type="button" class="b rmpcs" id="rmPcs">⚙ PC SETTINGS (change the home PC from here)</button>
+  <div class="rmvol"><span class="l">🔊 VOLUME</span><input type="range" id="rmVol" min="0.2" max="10" step="0.1" value="2" aria-label="How loud the radio is here"><b id="rmVolT">200%</b></div>
+  <div class="vfo">
+    <button type="button" class="ic" id="rmDown" aria-label="Down one step">−</button>
+    <button type="button" class="dialbig mono" id="rmVfo" title="Tap to type a frequency">—</button>
+    <button type="button" class="ic" id="rmUp" aria-label="Up one step">+</button>
+    <b class="rigmode" id="rmRigMode"></b>
+  </div>
+  <div class="chips steps" id="rmSteps" aria-label="Tuning step"><button type="button" class="chip" data-step="10">10 Hz</button><button type="button" class="chip" data-step="100">100 Hz</button><button type="button" class="chip on" data-step="1000">1 kHz</button><button type="button" class="chip" data-step="5000">5 kHz</button></div>
+  <div class="dialrow">
+    <span class="chips" id="rmPModes"><button type="button" class="chip mode" data-pm="LSB">LSB</button><button type="button" class="chip mode" data-pm="USB">USB</button><button type="button" class="chip mode" data-pm="CW">CW</button><button type="button" class="chip mode" data-pm="AM">AM</button><button type="button" class="chip mode" data-pm="FM">FM</button><button type="button" class="chip mode" data-pm="DATA">DATA</button></span>
+    <span class="chips" id="rmModes"></span>
+    <select id="rmBand" aria-label="Band on the PC's radio" class="selc"></select>
+  </div>
+  <div class="panel" id="rmPanel" hidden>
+    <div class="grid2">
+      <label class="e" id="rx_width">FILTER WIDTH<select id="rxWidth"><option value="250">250 Hz</option><option value="500">500 Hz</option><option value="1800">1.8 kHz</option><option value="2100">2.1 kHz</option><option value="2400">2.4 kHz</option><option value="2700">2.7 kHz</option><option value="3000">3.0 kHz</option></select></label>
+      <label class="e slide" id="rx_power">RF POWER <b id="rxPowerT">100 %</b><input type="range" id="rxPower" min="5" max="100" step="5" value="100"></label>
+      <label class="e slide" id="rx_mic">MIC GAIN <b id="rxMicT">50</b><input type="range" id="rxMic" min="0" max="100" step="5" value="50"></label>
+    </div>
+    <div class="btns">
+      <button type="button" class="b" id="rxNotch" data-label="NOTCH">NOTCH OFF</button>
+      <button type="button" class="b" id="rxNb" data-label="NB">NB OFF</button>
+      <button type="button" class="b" id="rxNr" data-label="NR">NR OFF</button>
+    </div>
+    <div class="st" id="rmNoEx" hidden></div>
+    <div class="strip" id="rmVoice" aria-label="Voice shaping"><span class="kv"><i>VOICE</i></span><button type="button" class="chip" data-voice="natural" title="Your voice as it is">NATURAL</button><button type="button" class="chip" data-voice="punch" title="A little brighter and tighter">PUNCH</button><button type="button" class="chip" data-voice="contest" title="Bright and compressed, like a contest mic: cuts through a pile-up">CONTEST</button></div>
+    <div class="strip" id="rmVk" hidden aria-label="The PC's voice keyer"></div>
+    <div id="rmCw" hidden>
+      <div class="grid2"><label class="e">THEIR CALL<input id="rmCwDx" autocapitalize="characters" spellcheck="false"></label><label class="e">SPEED (WPM)<input id="rmCwWpm" inputmode="numeric" value="20"></label></div>
+      <div class="chips wrap" id="rmCwMac"><button type="button" class="chip" data-cw="CQ CQ CQ DE {me} {me} K">CQ</button><button type="button" class="chip" data-cw="{dx} DE {me} {me} K">ANSWER</button><button type="button" class="chip" data-cw="{dx} UR 599 599 BK">599</button><button type="button" class="chip" data-cw="R TU 73 DE {me} E E">TU 73</button><button type="button" class="chip" data-cw="QRZ? DE {me} K">QRZ?</button></div>
+      <div class="row"><input id="rmCwT" class="cwt" placeholder="type CW to send…" autocapitalize="characters" spellcheck="false"><button type="button" class="b gold" id="rmCwSend">SEND</button><button type="button" class="b halt" id="rmCwStop">STOP</button></div>
+      <div class="st bad" id="rmCwNo" hidden>This radio cannot take typed CW over CAT (Yaesu radios need the key). Icom, Kenwood, Elecraft and QRP Labs radios can.</div>
+      <div class="d5key" id="rmKey" aria-label="Hand keying from the phone"></div>
+    </div>
+  </div>
+  <div class="btns">
+    <button type="button" class="b gold" id="rmRun">🎧 START THE PC LISTENING</button>
+    <button type="button" class="b" id="rmListen">🔊 LISTEN</button>
+  </div>
+  <div class="st meters" id="rmMeters" hidden aria-label="Radio meters">
+    <div id="rmMet"></div>
+    <div class="mfoot"><span>RF POWER SET <b id="rmPwrT">—</b></span><span class="hint" id="rmMetAge"></span><span class="pw"><button type="button" class="b" id="rmPwrOn">⏻ RADIO ON</button><button type="button" class="b" id="rmPwrOff">⏻ RADIO OFF</button></span></div>
+  </div>
+  <div class="specw" hidden><canvas id="rmSpec" aria-label="Band view: tap to move the TX spot"></canvas><p class="hint">What the PC's waterfall sees (200–2800 Hz). Gold dashes = your TX spot, blue = RX, dots = stations heard in the last 2 min. Tap a quiet gap to move TX there.</p></div>
+  <button type="button" class="talk" id="rmTalkB" disabled>🎙 HOLD TO TALK</button>
+  <div class="rmvol"><span class="l">🎙 MY VOICE</span><input type="range" id="rmVdb" min="-20" max="30" step="1" value="0" aria-label="How loud my voice goes to the radio"><b id="rmVdbT">0 dB</b></div>
+  <div class="btns" id="rmOps"></div>
+    <div class="d5key" id="rmKey2" hidden aria-label="Hand keying from the phone"></div>
+    <div class="row" id="rmKb" hidden><input id="rmKbT" class="cwt" placeholder="type here to send it from the PC…" autocapitalize="characters" spellcheck="false" autocomplete="off"><button type="button" class="b gold" id="rmKbSend">SEND</button><button type="button" class="b halt" id="rmKbStop">STOP</button></div>
+  <div class="st" id="rmQso" hidden></div>
+  <p class="hint" id="rmLim"></p>
+  <button type="button" class="b gold" id="rmHear" hidden>🔊 TAP TO HEAR THE RADIO</button>
+  <div class="list dec" id="rmLines" aria-label="What the PC hears"></div>
+  <div class="st dec" id="rmLog" aria-label="Last contacts"></div>
+  <div class="row"><button type="button" class="b" id="rmSync">🔄 SYNC THE LOG NOW</button></div>
+  <audio id="rmAudio" autoplay playsinline hidden></audio>
+</section>
+
+<!-- ========================= STATION ========================= -->
+<section class="scr" id="scrStation" aria-label="Station and settings">
+  <input id="stQ" class="find" placeholder="🔍 Find a setting (call, grid, radio, sound, log…)" autocomplete="off" spellcheck="false" aria-label="Find a setting">
+
+  <section class="card" data-grp="my station call sign grid park operator">
+    <h2>My station</h2>
+    <div class="grid2">
+      <label class="e">MY CALL SIGN<input id="stCall" autocapitalize="characters" spellcheck="false" placeholder="K4TEST"></label>
+      <label class="e">GRID SQUARE<input id="stGrid" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="EM78"></label>
+      <label class="e">PARK NUMBER (OPTIONAL)<input id="stRef" name="kpc-my-parks" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="US-0785 US-1234"></label>
+      <label class="e">I AM<select id="stRole"><option value="act">Activating a park</option><option value="hunt">Hunting from home</option></select></label>
+      <label class="e">SEND AS<select id="stAs"></select></label>
+      <label class="e">MY LICENCE CLASS<select id="stCls"><option value="">(not set)</option><option value="T">Technician</option><option value="G">General</option><option value="A">Advanced</option><option value="E">Extra</option></select></label>
+      <label class="e">DISTANCES IN<select id="stUnits"><option value="mi">Miles and feet</option><option value="km">Kilometres</option></select></label>
+      <label class="e">MY POWER (W)<input id="stPwr" inputmode="decimal" maxlength="5" placeholder="20"></label>
+      <label class="e">MY RIG<input id="stMyRig" maxlength="40" placeholder="FT-710"></label>
+      <label class="e">MY ANTENNA<input id="stAnt" maxlength="40" placeholder="EFHW on a 31 ft pole"></label>
+      <label class="e">MY COUNTY <small id="stCntyN" style="text-transform:none;letter-spacing:0;opacity:.75"></small><input id="stCnty" maxlength="40" placeholder="found by itself" title="Leave empty and the app finds it from your GPS or grid square (US). Type it to set it yourself, like KY,Hopkins"></label>
+      <label class="e">GOAL FOR AN ACTIVATION<select id="stGoalN"><option value="0">No goal</option><option value="10">10 contacts</option><option value="25">25</option><option value="44">44</option><option value="100">100</option></select></label>
+    </div>
+    <div class="row"><button type="button" class="b" id="stGps">📍 USE THIS DEVICE'S GPS FOR MY GRID</button><button type="button" class="b" id="stOps">👥 OPERATORS: <span id="stOpNow">just me</span></button></div>
+    <div class="st bad" id="stCallWarn" hidden></div>
+    <p class="hint">Your call and grid go into every FT8 message and every logged contact. Practice call on these screens: K4TEST.</p>
+  </section>
+
+  <section class="card" data-grp="radio cat control usb port ptt dial baud">
+    <h2>Radio control</h2>
+    <div class="grid2">
+      <label class="e" id="stProfW">RADIO PROFILE<select id="stProf"><option value="">(none saved yet)</option></select></label>
+      <label class="e">MY RADIO<select id="stRig"></select></label>
+      <label class="e catx">HOW THE APP REACHES IT<select id="stLink"></select></label>
+      <label class="e catx" id="stPortW">USB PORT<select id="stPort"><option value="">(press CONNECT)</option></select></label>
+      <label class="e" id="stHostW" hidden>PROGRAM'S ADDRESS<input id="stHost" spellcheck="false" placeholder="localhost"></label>
+      <label class="e" id="stTcpW" hidden>PORT NUMBER<input id="stTcpPort" inputmode="numeric" placeholder="4532"></label>
+      <label class="e">KEY THE RADIO WITH<select id="stPtt">
+        <option value="cat">CAT command (radio on USB)</option>
+        <option value="vox">VOX (the radio keys on the sound)</option>
+      </select></label>
+      <label class="e catx">VOICE FROM THIS DEVICE (keyer, hold to talk, the phone)<select id="stVmod"><option value="mic">Leave the radio's mode alone (radio's SSB MOD SOURCE = REAR)</option><option value="data">Switch the radio to DATA while it sends</option></select></label>
+      <label class="e catx">DIAL<select id="stFollow"><option value="1">Follow the radio's knob</option><option value="0">Leave the radio alone</option></select></label>
+    </div>
+    <div class="row">
+      <button type="button" class="b gold" id="stConn">📻 CONNECT RADIO</button>
+      <button type="button" class="b catx" id="stRead">READ DIAL</button>
+      <button type="button" class="b catx" id="stDis">DISCONNECT</button>
+      <button type="button" class="b catx" id="stProfSave">💾 SAVE AS A PROFILE</button>
+      <button type="button" class="b catx" id="stPortName" title="Give this port a radio's name (FT-710 shack, IC-705 field…)">✏️ NAME THIS PORT</button>
+      <button type="button" class="b catmore" id="stCatMore">⚙ MORE RADIO SETTINGS</button>
+      <button type="button" class="b" id="stRigTips">📖 WHAT TO SET ON THE RADIO</button>
+    </div>
+    <div class="st" id="stCatT">Not connected.</div>
+    <p class="hint catx">Profiles keep one radio's whole setup (type, speed, port, how it is keyed) under a name: home rig, field rig. Hamlib's rigctld and flrig are programs on the PC that know 300+ radios; pick one of them here when the radio is not in MY RADIO (rigctld needs the Windows app).</p>
+    <p class="hint catx">On a phone or tablet only these two ways of keying work: the CAT command, or the radio's own VOX. The RTS and DTR lines have to hold the USB port, and holding it stops the tablet sending sound to the radio. Set the radio to DATA mode with DATA MOD SOURCE = USB.</p>
+    <div class="row catx"><a class="b" href="radio-check.html">🔧 RADIO CHECK SCREEN (step-by-step test)</a></div>
+  </section>
+
+  <section class="card" data-grp="sound audio level device usb sound card tx level rx level receive gain volume alc">
+    <h2>Sound</h2>
+    <div class="grid2">
+      <label class="e">RADIO SOUND IN<select id="stIn"><option value="">Default</option></select></label>
+      <label class="e">RADIO SOUND OUT<select id="stOut"><option value="">Default</option></select></label>
+    </div>
+    <div class="row">
+      <button type="button" class="b gold" id="stStart">🎧 START LISTENING</button>
+      <button type="button" class="b" id="stStop">STOP</button>
+      <button type="button" class="b" id="stDev">↻ DEVICES</button>
+    </div>
+    <div class="meter"><i id="stLvl"></i><span id="stLvlT">off</span></div>
+    <div id="stLevels"></div>
+    <p class="hint">TX LEVEL: press TUNE on the FT8 screen and come down until the radio's ALC barely moves and the watts are full. Still not enough at 0 dB? Turn this device's media volume all the way up, then the radio's USB MOD GAIN. RX LEVEL: turn it up if the waterfall looks dark and the meter barely moves, down if the meter turns red (too loud). The radio's own USB OUT level does the same job, so start at 0 dB. Both are also in ⚙ FT8 on the FT8 screen.</p>
+  </section>
+
+  <section class="card" data-grp="log files adif export share clear backup">
+    <h2>Log files</h2>
+    <div class="row">
+      <button type="button" class="b gold" id="stAdif">⬇ SAVE ADIF FILE</button>
+      <button type="button" class="b" id="stCopy">📋 COPY THE LOG</button>
+      <button type="button" class="b" id="stClear">🗑 CLEAR THE LOG</button>
+      <button type="button" class="b" id="stCols">🧩 COLUMNS &amp; ADIF</button>
+      <button type="button" class="b" id="stLook">📖 CALL LOOK-UP</button>
+      <button type="button" class="b" id="stPotaS">📊 MY POTA STATS</button>
+      <button type="button" class="b" id="stRespot">📣 AUTO RE-SPOT: ON</button>
+      <button type="button" class="b" id="stPota">📄 MY POTA FILES</button>
+    </div>
+    <div class="row">
+      <button type="button" class="b" id="stKpcSave">💾 SAVE KPC LOG FILE</button>
+      <button type="button" class="b" id="stKpcAdd">📂 ADD A LOG FILE</button>
+      <button type="button" class="b" id="stUp" data-lite="off">☁ UPLOADS</button>
+      <input type="file" id="stKpcFile" accept=".kpclog,.adi,.adif,.json,.txt,application/json,text/plain" hidden>
+    </div>
+    <div class="st" id="stUpT" data-lite="off">No uploads turned on.</div>
+    <p class="hint">ADIF is the file POTA, WWFF, SOTA, LoTW and QRZ all take (a 2-fer on your side = one file per park). UPLOADS sends each contact to QRZ, eQSL or Wavelog by itself when there is signal. The KPC log file carries every contact for every operator: save it here, ADD it on your other phone or PC, and the two logs merge with no doubles. The log also stays in the app until you clear it.</p>
+    <textarea id="stAdifT" class="adif" readonly hidden aria-label="Your log as ADIF"></textarea>
+  </section>
+
+  <section class="card" data-lite="off" data-grp="parks offline pack download state outline am i in the park next park gps directions">
+    <h2>Parks on this device</h2>
+    <div class="row">
+      <label class="e small">STATE<select id="pkState"></select></label>
+      <button type="button" class="b gold" id="pkGet">⬇ DOWNLOAD</button>
+    </div>
+    <div class="oplist" id="pkList"></div>
+    <div class="row">
+      <button type="button" class="b" id="pkHere" disabled>📍 AM I IN THE PARK?</button>
+      <button type="button" class="b" id="pkNext" disabled>🧭 NEXT PARK</button>
+      <button type="button" class="b gold" id="pkMap" disabled>🗺 MAP OF MY PARKS</button>
+    </div>
+    <div class="st" id="pkOut" hidden></div>
+    <p class="hint">Download a state once while you have signal; the parks stay on this device. Kentucky comes with every park's outline (official, or marked approximate); other states come with pins for now. AM I IN THE PARK works from GPS with no signal.</p>
+  </section>
+
+  <section class="card" data-lite="off" data-grp="remote link phone pc tailscale pair code wifi base station control operator">
+    <h2>Remote</h2>
+    <div id="rmBase"></div>
+    <div id="rmLink"></div>
+  </section>
+
+  <section class="card" data-grp="alerts notifications watchlist closures hunters calling buzz">
+    <h2>Alerts</h2>
+    <div class="st" id="alCond">Checking park notices…</div>
+    <div class="st" id="alHunt"></div>
+    <div class="oplist" id="alList"></div>
+    <div id="alSw"></div>
+    <div class="row"><button type="button" class="b" id="alTest">🔔 TEST AN ALERT</button><button type="button" class="b" id="alClear">CLEAR THE LIST</button></div>
+    <p class="hint">One place for everything that wants you: a friend on the watchlist, a spot for a park you still need, the club bots' park closures, hunters-are-out times, someone calling you on FT8. Each one can be switched off.</p>
+  </section>
+
+  <section class="card" data-grp="alerts help clock time wsjtx about independence">
+    <h2>Alerts &amp; help</h2>
+    <div class="st" id="stClk">Clock: checking…</div>
+    <div class="row"><button type="button" class="b" id="stClkCal" hidden>⏱ CALIBRATE</button></div>
+    <p class="hint">FT8 needs this device's clock right within about a second. If it drifts, turn on "set time automatically" in Android or Windows settings.</p>
+    <p class="hint">How the FT8 screen works: it listens to the radio's sound and shows everyone it hears every 15 seconds (FT4: 7.5 s). Tap a line to call that station — the six messages fill in and TX turns on. With <b>Auto</b> on it answers by itself (grid → report → R-report → RR73 → 73) and the contact drops into your log. Decoder: ft8_lib by Karlis Goba (MIT licence).</p>
+    <div class="st" id="stUpd" hidden></div>
+    <div class="row"><button type="button" class="b" id="stUpdNow">⬆ CHECK FOR A NEW BUILD</button></div>
+    <div class="row"><button type="button" class="b" id="stReport">📋 COPY A REPORT FOR THE BUILDERS</button></div>
+    <p class="hint">Something wrong? Press that, paste the text to whoever is fixing the app: version, device, settings, radio and the last messages. Nothing secret goes in it.</p>
+    <p class="hint">KPC is an independent ham radio club, not part of Parks on the Air®, SOTA or WWFF. Build <span id="stVer" class="mono"></span>.</p>
+  </section>
+
+  <section class="card" data-grp="look dark light night theme">
+    <h2>Look</h2>
+    <div class="row">
+      <button type="button" class="b" data-look="dark" data-style="lodge">🔥 CABIN LODGE</button>
+      <button type="button" class="b" data-look="dark" data-style="forest">🌲 FOREST NIGHT</button>
+      <button type="button" class="b" data-look="light">☀️ LIGHT</button>
+    </div>
+  </section>
+
+  <!-- Brandon Oct 22: 'not sure if log + setting is useful?' — kept, but at the bottom, said plainly -->
+  <section class="card" data-grp="backup new phone move save settings restore safety copy">
+    <h2>Moving to a new phone or PC</h2>
+    <div class="row"><button type="button" class="b" id="stBackup">💾 SAVE MY SETTINGS + LOG TO A FILE</button><button type="button" class="b" id="stRestore">📂 PUT THEM BACK FROM A FILE</button><input type="file" id="stRestoreFile" accept=".kpcbackup,application/json" hidden></div>
+    <p class="hint">Only needed for a new phone or PC, or a safety copy. Your phone and PC already share the log with each other on their own.</p>
+  </section>
+</section>
+
+</main>
+
+<nav class="tabs" aria-label="Screens">
+  <button type="button" data-go="log" class="on"><i>📋</i><span>LOG</span></button>
+  <button type="button" data-go="digi"><i>📶</i><span>DIGI</span></button>
+  <button type="button" data-go="spots"><i>📍</i><span>SPOTS</span></button>
+  <button type="button" data-go="remote" hidden data-lite="off"><i>📡</i><span>REMOTE</span></button>
+  <button type="button" data-go="station"><i>⚙</i><span>STATION</span></button>
+</nav>
+
+<div class="sheet" id="sheet" hidden><div class="sbox" role="dialog" aria-modal="true" aria-label="Settings"><div class="shead"><b id="sheetT">Settings</b><button type="button" class="ic sm" id="sheetX" aria-label="Done">✓ DONE</button></div><div class="sbody" id="sheetB"></div></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="kpc-nr.js?v=20261106a"></script><script src="kpc-native.js?v=20261106a"></script>
+<script src="kpc-ft8-wasm.js?v=20261028b"></script><script src="kpc-ft8.js?v=20261028b"></script>
+<script src="kpc-cat.js?v=20261106b"></script>
+<script src="kpc-fake.js?v=20261028b"></script>
+<script src="kpc-app.js?v=20261106b"></script>
+<script src="kpc-log.js?v=20261105a"></script><script src="kpc-voice.js?v=20261028b"></script>
+<script src="kpc-mode.js?v=20261028b"></script>
+<script src="kpc-digi.js?v=20261101a"></script>
+<script>/* KPC Lite (kpc-flavor.js) leaves these out: APRS and the step-5 modes; uploads, park packs and the remote link below. */
+if(!document.documentElement.dataset.lite)document.write('<script src="kpc-ax25.js?v=20261028b"><\/script><script src="kpc-aprs.js?v=20261028b"><\/script><script src="kpc-dsp.js?v=20261028b"><\/script><script src="kpc-modes5.js?v=20261028b"><\/script>');</script>
+<script src="kpc-cont.js?v=20261028b"></script><script src="kpc-spots.js?v=20261106a"></script>
+<script src="kpc-sources.js?v=20261028b"></script>
+<script>if(!document.documentElement.dataset.lite)document.write('<script src="kpc-uploads.js?v=20261028b"><\/script>');</script>
+<script src="kpc-map.js?v=20261028b"></script><script src="kpc-prop.js?v=20261028b"></script>
+<script>if(!document.documentElement.dataset.lite)document.write('<script src="kpc-parks.js?v=20261028b"><\/script>');</script>
+<script src="kpc-alerts.js?v=20261028b"></script>
+<script src="kpc-meters.js?v=20261106b"></script>
+<script src="kpc-spotme.js?v=20261101a"></script>
+<script src="kpc-pota.js?v=20261101a"></script>
+<script src="kpc-radio.js?v=20261106b"></script>
+<script src="kpc-qsomap.js?v=20261028b"></script>
+<script src="kpc-contest.js?v=20261106b"></script><script src="kpc-skim.js?v=20261106b"></script><script src="kpc-scope.js?v=20261106a"></script><script src="kpc-rotor.js?v=20261106a"></script><script src="kpc-rigx.js?v=20261106c"></script><script src="kpc-help.js?v=20261106b"></script>
+<script>if(!document.documentElement.dataset.lite)document.write('<script src="kpc-remote.js?v=20261108a"><\/script>');</script><script src="kpc-iphone.js?v=20261108a"></script>
+</body>
+</html>
