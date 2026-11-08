@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KPC · Radio check</title>
+<link rel="stylesheet" href="check.css?v=20261022a">
+<script>try{var t=localStorage.getItem('kpcTheme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
+</head>
+<body>
+<header class="top">
+  <a class="badge" href="index.html" title="Back to the app">← KPC</a>
+  <span class="ttl">Radio check</span>
+  <span class="tag" id="plat">…</span>
+  <button type="button" class="ic" id="look" aria-label="Switch light or dark">◐</button>
+</header>
+<main>
+  <p class="lead">Step 2 test build: sound in and out the app's own way, and the radio over USB. Plug the radio in, turn it on, then go top to bottom. New in 0.2.7: the app only touches the radio's USB control port for a split second per command and lets go before sending sound (holding it muted the radio).</p>
+
+  <section class="card" id="sound">
+    <h2>1 · Sound</h2>
+    <div class="row">
+      <label>RADIO SOUND IN <select id="inDev"><option value="">Default</option></select></label>
+      <label>RADIO SOUND OUT <select id="outDev"><option value="">Default</option></select></label>
+    </div>
+    <div class="row">
+      <button type="button" class="gold" id="start">START LISTENING</button>
+      <button type="button" id="stop" disabled>STOP</button>
+      <button type="button" id="refresh" title="Look for the USB sound card again">↻ DEVICES</button>
+    </div>
+    <div class="meter"><i id="lvl"></i><span id="lvlT">off</span></div>
+    <p class="hint" id="soundHint">Aim for −30 to −10 dB with the band noise. Turn the radio's USB audio out (FT-710: USB OUT LEVEL) up or down to get there.</p>
+    <div class="row small">
+      <span>Mode <b id="modeT">FT8</b></span><span>Dial <b id="dialT">14.074</b> MHz</span><span id="slotT">slot —</span><span id="cntT">0 decoded</span>
+    </div>
+    <div class="dec" id="dec"><div class="empty">Decodes show up here every 15 seconds while listening.</div></div>
+  </section>
+
+  <section class="card" id="tx">
+    <h2>2 · Transmit</h2>
+    <label class="slider">TX LEVEL <b id="pwrT">−6 dB</b>
+      <span class="pw"><button type="button" id="pwrD">−</button><input type="range" id="pwr" min="-40" max="0" step="0.5" value="-6" aria-label="TX level in dB"><button type="button" id="pwrU">+</button></span>
+    </label>
+    <div class="row small" id="txOpts">
+      <label class="ck"><input type="checkbox" id="optPause" checked> Pause listening while sending</label>
+      <label class="ck"><input type="checkbox" id="optStereo"> Stereo out (needs STOP + START)</label>
+      <label class="ck"><input type="checkbox" id="optLow"> Low-latency out (needs STOP + START)</label>
+      <label class="ck"><input type="checkbox" id="optDeep"> Media-player path, 1 s buffer (needs STOP + START)</label>
+    </div>
+    <p class="hint">Press TUNE and watch the radio: ALC should barely move and the watts should be full. ALC high but low power = too much audio, come down. Not enough at 0 dB = turn the radio's USB MOD GAIN up. The radio needs DATA mode with DATA MOD SOURCE = USB.</p>
+    <div class="row">
+      <button type="button" class="gold" id="tune">TUNE (10 s)</button>
+      <button type="button" class="red" id="halt">STOP TX</button>
+      <button type="button" id="tuneOnly" title="Plays the tone with nothing listening, like a video app">TUNE, NOTHING LISTENING</button>
+      <button type="button" id="tuneMedia" title="Plays a tone file through Android's media player, the same way YouTube plays">MEDIA PLAYER TONE</button>
+      <button type="button" class="gold" id="tuneFree" title="Lets go of the radio's USB control port first, then plays the media-player tone. Key the radio with MOX yourself.">TONE, RADIO LET GO (use MOX)</button>
+      <label>PTT <select id="ptt"><option value="cat">CAT command</option><option value="rts">RTS line</option><option value="dtr">DTR line</option><option value="vox">VOX (nothing sent)</option></select></label>
+    </div>
+    <div class="row">
+      <label>MY CALL <input id="call" placeholder="K4TEST" autocapitalize="characters" spellcheck="false" maxlength="12"></label>
+      <label>GRID <input id="grid" placeholder="EM78" autocapitalize="characters" spellcheck="false" maxlength="4"></label>
+      <button type="button" id="cq">SEND ONE FT8 CQ</button>
+    </div>
+    <p class="hint">SEND ONE FT8 CQ transmits once in the next even 15-second slot with your call, like a real contact, so you can see ALC and watts with FT8 tones. It does not answer anyone.</p>
+    <div class="st" id="txT">TX off</div>
+  </section>
+
+  <section class="card" id="radio">
+    <h2>3 · Radio control</h2>
+    <div class="row">
+      <label>RADIO <select id="rig"></select></label>
+      <label>USB PORT <select id="port"><option value="">(press CONNECT first)</option></select></label>
+    </div>
+    <div class="row">
+      <button type="button" class="gold" id="connect">CONNECT RADIO</button>
+      <button type="button" id="readDial">READ DIAL</button>
+      <button type="button" id="setDial">SET 14.074 FT8 (DATA)</button>
+      <button type="button" id="disconnect">DISCONNECT</button>
+    </div>
+    <div class="st" id="catT">Not connected.</div>
+  </section>
+
+  <section class="card">
+    <h2>What happened</h2>
+    <div class="log" id="log"></div>
+    <div class="row"><button type="button" id="copyLog">COPY FOR BRANDON TO SEND</button></div>
+  </section>
+  <p class="foot">KPC is an independent ham radio club, not part of Parks on the Air®, SOTA or WWFF. Test build <span id="ver"></span>.</p>
+</main>
+<script src="capacitor.js"></script>
+<script src="kpc-native.js?v=20261025k"></script>
+<script src="kpc-ft8-wasm.js?v=20261024a"></script><script src="kpc-ft8.js?v=20261025k"></script>
+<script src="kpc-cat.js?v=20261026a"></script>
+<script src="test.js?v=20261023a"></script>
+</body>
+</html>
