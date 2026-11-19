@@ -81,28 +81,13 @@ Away from home: just make sure **Tailscale is on** on the iPhone (and the PC is 
 
 ---
 
-## The iPhone beta website (optional)
+## The old iPhone beta website (retired Nov 18 2026)
 
-The PC already hands out the page (ways 1 and 2), and that page is always the same version as the PC's app.
-The **beta website** (the `KPC-iPhone-beta` folder on the BDW-Coils site: https://kentuckyportableclub.github.io/BDW-Coils/KPC-iPhone-beta/) is for:
-- the log and the spots when the PC is off, and
-- a fixed web address to share with testers.
+The `KPC-iPhone-beta` folder on the BDW-Coils site used to hold a copy of the app (0.8.0, Nov 8). It was retired on Nov 18 2026:
+it could no longer connect to a current PC (since 0.9.0 the PC asks for a newer pairing), and the page the PC hands out (ways 1 and 2
+above) is always the same version as the PC's app. The address now shows a short page that points here.
 
-To run the radio from the beta website, type the PC's **Tailscale** address in **PC ADDRESS** with `wss://` in front:
-```
-wss://brandon-pc.tail1234.ts.net
-```
-(A page from the internet can only reach the PC through Tailscale's secure address, not the plain home one.)
-
-### Updating the beta website
-It lives in the **KPC-iPhone-beta** folder of the **BDW-Coils** repo, so there is no separate repo and no Pages setup.
-1. Make the copy: `bash tools/iphone/make-beta.sh` (or unzip **KPC-iPhone-beta.zip**).
-2. GitHub Desktop, BDW-Coils: **Repository → Show in Explorer** → open the **KPC-iPhone-beta** folder → paste the new files over the old ones.
-3. Summary `iPhone beta`, **Commit**, **Push origin**. A minute later it is live at
-   `https://kentuckyportableclub.github.io/BDW-Coils/KPC-iPhone-beta/`.
-
-The beta website is **public**: anyone with the address can open the page, but nobody can run your radio without your PC's pair code
-and your **✓ APPROVE** (and, from the internet, your Tailscale).
+If the old page is on your Home Screen, delete that icon and add the PC's address (way 1 or way 2) instead.
 
 ---
 
