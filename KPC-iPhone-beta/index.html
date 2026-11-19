@@ -37,6 +37,19 @@
   </ol>
   <p><small>Talking needs the Tailscale way below. Listening and running the radio work on the plain home address.</small></p>
 
+  <h2>Where do I find my PC's address?</h2>
+  <p>A web page on your iPhone can't look inside your home network, so it can't find the PC by itself. The PC shows it to you:</p>
+  <ol>
+    <li><b>Easiest:</b> in the KPC app on the PC, <b>STATION → REMOTE LINK → 📡 LET MY PHONE IN</b>. The card lists the address
+      (it looks like <code>192.168.1.25</code>) next to the pair code.</li>
+    <li><b>Or in Windows:</b> Start → Settings → Network &amp; internet → Wi-Fi (or Ethernet) → your network's properties.
+      The address is the line called <b>IPv4 address</b>.</li>
+    <li><b>Or type it out:</b> press the Windows key, type <b>cmd</b>, open Command Prompt, type <code>ipconfig</code> and press Enter.
+      Use the <b>IPv4 Address</b> line (it usually starts with 192.168 or 10.).</li>
+  </ol>
+  <p><small>For the Tailscale way, the address is your PC's name in the Tailscale app on the iPhone (tap the PC to copy it),
+  or type <code>tailscale serve status</code> on the PC.</small></p>
+
   <h2>Anywhere, and talking too (Tailscale)</h2>
   <ol>
     <li>Install Tailscale on the PC and the iPhone and sign in with the same account.</li>

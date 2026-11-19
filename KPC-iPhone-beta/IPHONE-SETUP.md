@@ -27,6 +27,14 @@ There are **two ways** to open it. Way 1 takes two minutes. Way 2 takes about fi
 
 ---
 
+### Finding the PC's address
+- In the KPC app on the PC: **STATION → REMOTE LINK → 📡 LET MY PHONE IN** lists it (like `192.168.1.25`).
+- Or Windows: **Settings → Network & internet → Wi-Fi** (or Ethernet) → your network's properties → **IPv4 address**.
+- Or press the Windows key, type **cmd**, open Command Prompt and type `ipconfig`: use the **IPv4 Address** line.
+- For Tailscale: the PC's name in the Tailscale app on the iPhone, or `tailscale serve status` on the PC.
+
+---
+
 ## Way 1 — at home, no extra apps (listen + run the radio, no talking)
 
 1. The iPhone must be on the **same Wi-Fi** as the PC.
